@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Reliability | RiskIntel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .sidebar { background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%); }
+        .reliability-bar { transition: width 0.5s ease; }
+        .card { transition: transform 0.2s; }
+        .card:hover { transform: translateY(-2px); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <div class="sidebar w-72 text-white p-6">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-xl">🎯</div>
+                <div><div class="font-bold text-xl">RiskIntel</div><div class="text-xs text-white/50">Task Risk Intelligence</div></div>
+            </div>
+            <nav class="space-y-2">
+                <a href="index.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/10 rounded-xl transition">📊 Dashboard</a>
+                <a href="meeting.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/10 rounded-xl transition">🎙️ New Meeting</a>
+                <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/10 rounded-xl transition">📋 All Tasks</a>
+                <a href="team-reliability.html" class="flex items-center gap-3 px-4 py-3 bg-white/10 rounded-xl">👥 Team Reliability</a>
+                <a href="settings.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/10 rounded-xl transition">⚙️ Settings</a>
+                <a href="help-center.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/10 rounded-xl transition">❓ Help Center</a>
+            </nav>
+            <div class="absolute bottom-8 text-xs text-white/30">v2.0 | Execution Intelligence</div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 p-8">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-800">Team Reliability</h1>
+                <p class="text-gray-500 mt-1">Track and analyze team member performance over time</p>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-2xl p-6 shadow-sm text-center">
+                    <div class="text-3xl font-bold text-purple-600" id="avgReliability">0%</div>
+                    <div class="text-sm text-gray-500 mt-1">Average Reliability</div>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm text-center">
+                    <div class="text-3xl font-bold text-green-600" id="totalTasks">0</div>
+                    <div class="text-sm text-gray-500 mt-1">Total Tasks</div>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm text-center">
+                    <div class="text-3xl font-bold text-blue-600" id="activeMembers">0</div>
+                    <div class="text-sm text-gray-500 mt-1">Active Members</div>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm text-center">
+                    <div class="text-3xl font-bold text-orange-600" id="delayedTasks">0</div>
+                    <div class="text-sm text-gray-500 mt-1">Delayed Tasks</div>
+                </div>
+            </div>
+
+            <!-- Team Members Grid -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm mb-8">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">👥 Team Members</h2>
+                <div id="teamMembersGrid" class="grid grid-cols-2 gap-4">
+                    <div class="text-center text-gray-400 py-8">Loading team data...</div>
+                </div>
+            </div>
+
+            <!-- Most Reliable & Needs Attention -->
+            <div class="grid grid-cols-2 gap-6">
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="text-2xl">🏆</span>
+                        <h2 class="text-lg font-semibold text-gray-800">Most Reliable</h2>
+                    </div>
+                    <div id="mostReliableList" class="space-y-3">
+                        <div class="text-center text-gray-400 py-4">Loading...</div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="text-2xl">⚠️</span>
+                        <h2 class="text-lg font-semibold text-gray-800">Needs Attention</h2>
+                    </div>
+                    <div id="needsAttentionList" class="space-y-3">
+                        <div class="text-center text-gray-400 py-4">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+
+        async function loadTeamData() {
+            try {
+                const response = await fetch(`${API_URL}/api/team/analytics`);
+                const data = await response.json();
+                
+                document.getElementById('avgReliability').innerText = `${data.averageReliability || 0}%`;
+                document.getElementById('activeMembers').innerText = data.allMembers?.length || 0;
+                
+                // Team Members Grid
+                const grid = document.getElementById('teamMembersGrid');
+                grid.innerHTML = data.allMembers?.map(m => `
+                    <div class="bg-gray-50 rounded-xl p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-semibold text-gray-800">${m.name}</div>
+                                <div class="text-xs text-gray-500">${m.email}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xl font-bold ${m.reliability >= 70 ? 'text-green-600' : (m.reliability >= 50 ? 'text-yellow-600' : 'text-red-600')}">
+                                    ${m.reliability}%
+                                </div>
+                                <div class="text-xs text-gray-500">${m.completedTasks}/${m.totalTasks} tasks</div>
+                            </div>
+                        </div>
+                        <div class="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full ${m.reliability >= 70 ? 'bg-green-500' : (m.reliability >= 50 ? 'bg-yellow-500' : 'bg-red-500')}" style="width: ${m.reliability}%"></div>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-2">Delayed: ${m.delayCount || 0} tasks</div>
+                    </div>
+                `).join('');
+                
+                // Most Reliable
+                document.getElementById('mostReliableList').innerHTML = data.mostReliable?.map(m => `
+                    <div class="flex justify-between items-center p-3 bg-green-50 rounded-xl">
+                        <div><div class="font-medium">${m.name}</div><div class="text-xs text-gray-500">${m.email}</div></div>
+                        <div class="text-green-600 font-bold text-lg">${m.reliability}%</div>
+                    </div>
+                `).join('');
+                
+                // Needs Attention
+                document.getElementById('needsAttentionList').innerHTML = data.needsAttention?.map(m => `
+                    <div class="flex justify-between items-center p-3 bg-red-50 rounded-xl">
+                        <div><div class="font-medium">${m.name}</div><div class="text-xs text-gray-500">${m.email}</div></div>
+                        <div class="text-red-600 font-bold text-lg">${m.reliability}%</div>
+                    </div>
+                `).join('');
+                
+                const tasksRes = await fetch(`${API_URL}/api/tasks`);
+                const tasks = await tasksRes.json();
+                document.getElementById('totalTasks').innerText = tasks.length;
+                document.getElementById('delayedTasks').innerText = tasks.filter(t => t.delayCount > 0).length;
+                
+            } catch (error) {
+                console.log('Backend not running, using demo data');
+                loadDemoData();
+            }
+        }
+
+        function loadDemoData() {
+            document.getElementById('avgReliability').innerText = '70%';
+            document.getElementById('activeMembers').innerText = '7';
+            document.getElementById('totalTasks').innerText = '127';
+            document.getElementById('delayedTasks').innerText = '32';
+            
+            document.getElementById('teamMembersGrid').innerHTML = `
+                <div class="bg-gray-50 rounded-xl p-4"><div class="flex justify-between"><div><div class="font-semibold">Sarah Kim</div><div class="text-xs text-gray-500">sarah@nexus.ai</div></div><div class="text-green-600 font-bold text-xl">92%</div></div><div class="mt-2 h-2 bg-gray-200 rounded-full"><div class="h-full bg-green-500 rounded-full" style="width:92%"></div></div></div>
+                <div class="bg-gray-50 rounded-xl p-4"><div class="flex justify-between"><div><div class="font-semibold">Priya Singh</div><div class="text-xs text-gray-500">priya@nexus.ai</div></div><div class="text-green-600 font-bold text-xl">88%</div></div><div class="mt-2 h-2 bg-gray-200 rounded-full"><div class="h-full bg-green-500 rounded-full" style="width:88%"></div></div></div>
+                <div class="bg-gray-50 rounded-xl p-4"><div class="flex justify-between"><div><div class="font-semibold">Jordan Lee</div><div class="text-xs text-gray-500">jordan@nexus.ai</div></div><div class="text-yellow-600 font-bold text-xl">78%</div></div><div class="mt-2 h-2 bg-gray-200 rounded-full"><div class="h-full bg-yellow-500 rounded-full" style="width:78%"></div></div></div>
+                <div class="bg-gray-50 rounded-xl p-4"><div class="flex justify-between"><div><div class="font-semibold">Alex Chen</div><div class="text-xs text-gray-500">alex@nexus.ai</div></div><div class="text-yellow-600 font-bold text-xl">54%</div></div><div class="mt-2 h-2 bg-gray-200 rounded-full"><div class="h-full bg-yellow-500 rounded-full" style="width:54%"></div></div></div>
+                <div class="bg-gray-50 rounded-xl p-4"><div class="flex justify-between"><div><div class="font-semibold">Marcus Wright</div><div class="text-xs text-gray-500">marcus@nexus.ai</div></div><div class="text-red-600 font-bold text-xl">38%</div></div><div class="mt-2 h-2 bg-gray-200 rounded-full"><div class="h-full bg-red-500 rounded-full" style="width:38%"></div></div></div>
+            `;
+            document.getElementById('mostReliableList').innerHTML = `
+                <div class="flex justify-between p-3 bg-green-50 rounded-xl"><div><div class="font-medium">Sarah Kim</div><div class="text-xs text-gray-500">sarah@nexus.ai</div></div><div class="text-green-600 font-bold text-lg">92%</div></div>
+                <div class="flex justify-between p-3 bg-green-50 rounded-xl"><div><div class="font-medium">Priya Singh</div><div class="text-xs text-gray-500">priya@nexus.ai</div></div><div class="text-green-600 font-bold text-lg">88%</div></div>
+            `;
+            document.getElementById('needsAttentionList').innerHTML = `
+                <div class="flex justify-between p-3 bg-red-50 rounded-xl"><div><div class="font-medium">Marcus Wright</div><div class="text-xs text-gray-500">marcus@nexus.ai</div></div><div class="text-red-600 font-bold text-lg">38%</div></div>
+                <div class="flex justify-between p-3 bg-red-50 rounded-xl"><div><div class="font-medium">Alex Chen</div><div class="text-xs text-gray-500">alex@nexus.ai</div></div><div class="text-red-600 font-bold text-lg">54%</div></div>
+            `;
+        }
+
+        loadTeamData();
+        setInterval(loadTeamData, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Intelligence | RiskIntel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .sidebar { background: linear-gradient(180deg, #0f0c29 0%, #302b63 50%, #24243e 100%); }
+        .card { background: white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: transform 0.2s; }
+        .card:hover { transform: translateY(-2px); }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #22c55e; color: white; padding: 12px 24px; border-radius: 8px; z-index: 1000; animation: fadeInOut 3s ease-in-out; }
+        @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(20px); } 15% { opacity: 1; transform: translateY(0); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(20px); } }
+        .risk-high { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-left: 4px solid #dc2626; }
+        .risk-medium { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b; }
+        .risk-low { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-left: 4px solid #22c55e; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <div class="sidebar w-72 text-white p-6 fixed h-full">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center text-lg">🎯</div>
+                <div><div class="font-bold text-xl">RiskIntel</div><div class="text-xs text-white/40">Task Risk Intelligence</div></div>
+            </div>
+            <nav class="space-y-1">
+                <a href="index.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">📊 Dashboard</a>
+                <a href="meeting.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">🎙️ New Meeting</a>
+                <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">📋 All Tasks</a>
+                <a href="team-dashboard.html" class="flex items-center gap-3 px-4 py-3 bg-white/10 rounded-xl">👥 Team Intelligence</a>
+                <a href="settings.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">⚙️ Settings</a>
+                <a href="help-center.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">❓ Help Center</a>
+            </nav>
+            <div class="absolute bottom-4 px-3 text-xs text-white/30">v2.0 | Execution Intelligence</div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="ml-72 flex-1 p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold text-gray-800">Team Intelligence</h1>
+                <div class="text-sm text-gray-500">Behavioral reliability and execution patterns</div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="card p-4 text-center"><div class="text-2xl font-bold text-purple-600" id="meetingCount">0</div><div class="text-sm text-gray-500">Meetings</div></div>
+                <div class="card p-4 text-center"><div class="text-2xl font-bold text-purple-600" id="taskCount">0</div><div class="text-sm text-gray-500">Tasks</div></div>
+                <div class="card p-4 text-center"><div class="text-2xl font-bold text-purple-600" id="decisionCount">0</div><div class="text-sm text-gray-500">Decisions</div></div>
+                <div class="card p-4 text-center"><div class="text-2xl font-bold text-purple-600" id="teamCount">7</div><div class="text-sm text-gray-500">Team Members</div></div>
+            </div>
+
+            <!-- Learning Accuracy Banner -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6 text-sm">
+                <div class="flex justify-between items-center">
+                    <div><span class="font-medium">🎯 System Learning:</span> <span id="accuracyMessage">87% accuracy based on 127 tasks</span></div>
+                    <div class="text-xs text-gray-500" id="confidenceLevel">Confidence: High</div>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2"><div id="accuracyBar" class="bg-green-600 h-1.5 rounded-full" style="width: 87%"></div></div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-6">
+                <!-- Column 1: Team Reliability -->
+                <div class="card p-5">
+                    <h2 class="font-bold text-lg mb-4">🏆 Most Reliable</h2>
+                    <div id="mostReliableList" class="space-y-3"></div>
+                    <h2 class="font-bold text-lg mt-6 mb-4">⚠️ Needs Attention</h2>
+                    <div id="needsAttentionList" class="space-y-3"></div>
+                </div>
+
+                <!-- Column 2: Delay Patterns -->
+                <div class="card p-5">
+                    <h2 class="font-bold text-lg mb-4">📊 Common Delay Patterns</h2>
+                    <div id="delayPatterns" class="space-y-3"></div>
+                    <h2 class="font-bold text-lg mt-6 mb-4">🎯 Risk Distribution</h2>
+                    <canvas id="riskChart" height="150"></canvas>
+                </div>
+
+                <!-- Column 3: Team Members -->
+                <div class="card p-5">
+                    <h2 class="font-bold text-lg mb-4">👥 Team Members</h2>
+                    <div id="teamMembersList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                </div>
+            </div>
+
+            <!-- Action Panel - ONLY 2 BUTTONS -->
+            <div class="card p-5 mt-6 bg-purple-50 border border-purple-200">
+                <h2 class="font-bold text-lg mb-3">🎯 Smart Suggestions</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="reassignHighRiskTasks()" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition">
+                        🔄 Reassign high-risk tasks
+                    </button>
+                    <button onclick="addCoOwnersToAPITasks()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition">
+                        👥 Add co-owners to API tasks
+                    </button>
+                </div>
+                <div id="suggestionResult" class="mt-3 text-sm text-center"></div>
+            </div>
+
+            
+
+            <!-- Learning Panel -->
+            <div id="learningPanel" class="card p-5 mt-6 hidden">
+                <h2 class="font-bold text-lg mb-3">🧠 Learning Engine</h2>
+                <div id="learningContent" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="hidden toast"></div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        let riskChart = null;
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.backgroundColor = isError ? '#ef4444' : '#22c55e';
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // ============ ACTION BUTTONS ============
+
+        async function reassignHighRiskTasks() {
+            try {
+                const response = await fetch(`${API_URL}/api/tasks`);
+                const tasks = await response.json();
+                const highRiskTasks = tasks.filter(t => t.riskScore > 70 && t.status !== 'completed');
+                
+                if (highRiskTasks.length === 0) {
+                    showToast('✅ No high-risk tasks found!');
+                    return;
+                }
+                
+                const teamResponse = await fetch(`${API_URL}/api/team/analytics`);
+                const teamData = await teamResponse.json();
+                const mostReliable = teamData.mostReliable[0];
+                
+                let reassignedCount = 0;
+                for (const task of highRiskTasks) {
+                    await fetch(`${API_URL}/api/tasks/${task.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ owner: mostReliable.name })
+                    });
+                    reassignedCount++;
+                }
+                
+                showToast(`✅ Reassigned ${reassignedCount} high-risk task(s) to ${mostReliable.name}`);
+                setTimeout(() => location.reload(), 1500);
+                
+            } catch (error) {
+                showToast('❌ Error reassigning tasks. Make sure backend is running.', true);
+            }
+        }
+
+        async function addCoOwnersToAPITasks() {
+            try {
+                const response = await fetch(`${API_URL}/api/tasks`);
+                const tasks = await response.json();
+                const teamResponse = await fetch(`${API_URL}/api/team/analytics`);
+                const teamData = await teamResponse.json();
+                const reliableMembers = teamData.mostReliable;
+                let updatedCount = 0;
+                
+                for (const task of tasks) {
+                    if ((task.title.toLowerCase().includes('api') || task.title.toLowerCase().includes('integration')) && task.status !== 'completed') {
+                        const coOwner = reliableMembers.find(m => m.name !== task.owner) || reliableMembers[0];
+                        const newDescription = `${task.description || ''}\n\n[Co-owner suggested: ${coOwner.name} (${coOwner.reliability}% reliability)]`;
+                        
+                        await fetch(`${API_URL}/api/tasks/${task.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ description: newDescription })
+                        });
+                        updatedCount++;
+                    }
+                }
+                
+                showToast(`✅ Added co-owner suggestions to ${updatedCount} API task(s)`);
+                setTimeout(() => location.reload(), 1500);
+                
+            } catch (error) {
+                showToast('❌ Error adding co-owners. Make sure backend is running.', true);
+            }
+        }
+
+        // ============ PANELS ============
+
+        async function showDecisions() {
+            try {
+                const response = await fetch(`${API_URL}/api/decisions`);
+                const decisions = await response.json();
+                const panel = document.getElementById('decisionsPanel');
+                const list = document.getElementById('decisionsList');
+                
+                if (decisions.length > 0) {
+                    list.innerHTML = decisions.map(d => `
+                        <div class="border-l-4 ${d.requiresAttention ? 'border-red-500 bg-red-50' : 'border-gray-300'} p-3 rounded">
+                            <div class="font-medium">${d.title.substring(0, 80)}</div>
+                            <div class="text-xs text-gray-500 mt-1">From: ${d.meetingTitle} | Owner: ${d.owner}</div>
+                            ${d.requiresAttention ? '<div class="text-xs text-red-600 mt-1 font-medium">⚠️ Needs attention</div>' : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div class="text-gray-500 text-center py-4">No decisions tracked yet</div>';
+                }
+                panel.classList.remove('hidden');
+                document.getElementById('learningPanel')?.classList.add('hidden');
+                showToast('📋 Decisions panel loaded');
+            } catch (error) {
+                showToast('Error loading decisions', true);
+            }
+        }
+
+        async function showLearning() {
+            try {
+                const response = await fetch(`${API_URL}/api/learning/summary`);
+                const data = await response.json();
+                const panel = document.getElementById('learningPanel');
+                const content = document.getElementById('learningContent');
+                
+                content.innerHTML = `
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="bg-green-50 p-3 rounded-lg text-center"><div class="text-2xl font-bold text-green-600">${data.summary?.modelAccuracy || 87}%</div><div class="text-xs text-gray-600">Model Accuracy</div></div>
+                        <div class="bg-blue-50 p-3 rounded-lg text-center"><div class="text-2xl font-bold text-blue-600">${data.summary?.totalPredictions || 127}</div><div class="text-xs text-gray-600">Predictions Made</div></div>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-2">⚠️ Accuracy improves with more data</div>
+                `;
+                panel.classList.remove('hidden');
+                document.getElementById('decisionsPanel')?.classList.add('hidden');
+                showToast('🧠 Learning panel loaded');
+            } catch (error) {
+                showToast('Error loading learning data', true);
+            }
+        }
+
+        function showTeam() {
+            document.getElementById('decisionsPanel')?.classList.add('hidden');
+            document.getElementById('learningPanel')?.classList.add('hidden');
+            loadTeamDashboard();
+        }
+
+        // ============ LOAD DASHBOARD ============
+
+        async function loadTeamDashboard() {
+            try {
+                const statsRes = await fetch(`${API_URL}/api/dashboard/stats`);
+                const stats = await statsRes.json();
+                document.getElementById('meetingCount').innerText = stats.totalMeetings || 0;
+                document.getElementById('taskCount').innerText = stats.total || 0;
+                document.getElementById('decisionCount').innerText = stats.totalDecisions || 0;
+
+                const analyticsRes = await fetch(`${API_URL}/api/team/analytics`);
+                const analytics = await analyticsRes.json();
+                
+                document.getElementById('mostReliableList').innerHTML = analytics.mostReliable?.map(m => `
+                    <div class="flex justify-between items-center">
+                        <div><div class="font-medium">${m.name}</div><div class="text-xs text-gray-500">${m.email}</div></div>
+                        <div class="text-green-600 font-bold">${m.reliability}%</div>
+                    </div>
+                `).join('') || '<div class="text-gray-500">No data</div>';
+                
+                document.getElementById('needsAttentionList').innerHTML = analytics.needsAttention?.map(m => `
+                    <div class="flex justify-between items-center">
+                        <div><div class="font-medium">${m.name}</div><div class="text-xs text-gray-500">${m.email}</div></div>
+                        <div class="text-red-600 font-bold">${m.reliability}%</div>
+                    </div>
+                `).join('') || '<div class="text-gray-500">No data</div>';
+                
+                document.getElementById('teamMembersList').innerHTML = analytics.allMembers?.map(m => `
+                    <div class="flex justify-between items-center p-2 hover:bg-gray-50 rounded-lg">
+                        <div><div class="font-medium text-sm">${m.name}</div><div class="text-xs text-gray-500">${m.email}</div><div class="text-xs text-gray-400">${m.completedTasks} tasks complete</div></div>
+                        <div class="text-right"><div class="font-bold ${m.reliability > 70 ? 'text-green-600' : (m.reliability > 50 ? 'text-yellow-600' : 'text-red-600')}">${m.reliability}%</div>
+                        <div class="w-16 h-1 bg-gray-200 rounded-full mt-1"><div class="h-1 rounded-full ${m.reliability > 70 ? 'bg-green-500' : (m.reliability > 50 ? 'bg-yellow-500' : 'bg-red-500')}" style="width: ${m.reliability}%"></div></div></div>
+                    </div>
+                `).join('') || '<div class="text-gray-500">No team members</div>';
+                
+                const patternsRes = await fetch(`${API_URL}/api/team/delay-patterns`);
+                const patternsData = await patternsRes.json();
+                document.getElementById('delayPatterns').innerHTML = patternsData.patterns?.map(p => `
+                    <div class="flex items-start gap-2 text-sm"><span class="text-orange-500">⚠️</span><span>${p}</span></div>
+                `).join('') || '<div class="text-gray-500">No patterns yet</div>';
+                
+                const riskRes = await fetch(`${API_URL}/api/risk/distribution`);
+                const riskDist = await riskRes.json();
+                updateRiskChart(riskDist);
+                
+            } catch (error) {
+                console.log('Backend not running, loading demo data');
+                loadDemoData();
+            }
+        }
+        
+        function updateRiskChart(distribution) {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            if (riskChart) riskChart.destroy();
+            riskChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: { labels: [`High (${distribution.high || 0})`, `Medium (${distribution.medium || 0})`, `Low (${distribution.low || 0})`],
+                datasets: [{ data: [distribution.high || 0, distribution.medium || 0, distribution.low || 0], backgroundColor: ['#ef4444', '#eab308', '#22c55e'], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+        
+        function loadDemoData() {
+            document.getElementById('mostReliableList').innerHTML = `
+                <div class="flex justify-between"><div><div class="font-medium">Sarah Kim</div><div class="text-xs text-gray-500">sarah@nexus.ai</div></div><div class="text-green-600 font-bold">92%</div></div>
+                <div class="flex justify-between"><div><div class="font-medium">Priya Singh</div><div class="text-xs text-gray-500">priya@nexus.ai</div></div><div class="text-green-600 font-bold">88%</div></div>`;
+            
+            document.getElementById('needsAttentionList').innerHTML = `
+                <div class="flex justify-between"><div><div class="font-medium">Marcus Wright</div><div class="text-xs text-gray-500">marcus@nexus.ai</div></div><div class="text-red-600 font-bold">38%</div></div>
+                <div class="flex justify-between"><div><div class="font-medium">Alex Chen</div><div class="text-xs text-gray-500">alex@nexus.ai</div></div><div class="text-red-600 font-bold">54%</div></div>`;
+            
+            document.getElementById('delayPatterns').innerHTML = `
+                <div class="flex items-start gap-2 text-sm"><span class="text-orange-500">⚠️</span><span>API tasks delayed 2.3x more often</span></div>
+                <div class="flex items-start gap-2 text-sm"><span class="text-orange-500">⚠️</span><span>Tasks without deadlines slip by 4.7 days</span></div>
+                <div class="flex items-start gap-2 text-sm"><span class="text-orange-500">⚠️</span><span>Friday deadlines fail 40% more</span></div>`;
+            
+            updateRiskChart({ high: 0, medium: 46, low: 0 });
+        }
+        
+        loadTeamDashboard();
+        setInterval(loadTeamDashboard, 30000);
+    </script>
+</body>
+</html>

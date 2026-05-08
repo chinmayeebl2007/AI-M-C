@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Management | RiskIntel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .sidebar { background: linear-gradient(180deg, #0f0c29 0%, #302b63 50%, #24243e 100%); }
+        .modal { transition: all 0.3s ease; }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #22c55e; color: white; padding: 12px 24px; border-radius: 8px; z-index: 1000; animation: fadeInOut 3s ease-in-out; }
+        @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(20px); } 15% { opacity: 1; transform: translateY(0); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(20px); } }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <div class="sidebar w-72 text-white p-6 fixed h-full">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center text-lg">🎯</div>
+                <div><div class="font-bold text-xl">RiskIntel</div><div class="text-xs text-white/40">Task Risk Intelligence</div></div>
+            </div>
+            <nav class="space-y-1">
+                <a href="index.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">📊 Dashboard</a>
+                <a href="meeting.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">🎙️ New Meeting</a>
+                <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">📋 All Tasks</a>
+                <a href="team-dashboard.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">👥 Team Intelligence</a>
+                <a href="team-management.html" class="flex items-center gap-3 px-4 py-3 bg-white/10 rounded-xl">➕ Manage Team</a>
+                <a href="settings.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">⚙️ Settings</a>
+                <a href="help-center.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">❓ Help Center</a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="ml-72 flex-1 p-8">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-800">Team Management</h1>
+                <p class="text-gray-500 mt-1">Add, edit, or remove team members</p>
+            </div>
+
+            <!-- Add Member Form -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm mb-8">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">➕ Add New Team Member</h2>
+                <div class="grid grid-cols-4 gap-4">
+                    <input type="text" id="memberName" placeholder="Full Name" class="border rounded-xl p-3 focus:ring-2 focus:ring-purple-500">
+                    <input type="email" id="memberEmail" placeholder="Email" class="border rounded-xl p-3 focus:ring-2 focus:ring-purple-500">
+                    <select id="memberRole" class="border rounded-xl p-3 focus:ring-2 focus:ring-purple-500">
+                        <option value="Developer">Developer</option>
+                        <option value="Designer">Designer</option>
+                        <option value="Manager">Manager</option>
+                        <option value="QA">QA</option>
+                        <option value="Product Owner">Product Owner</option>
+                    </select>
+                    <button onclick="addTeamMember()" class="bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 transition">➕ Add Member</button>
+                </div>
+            </div>
+
+            <!-- Team Members List -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">👥 Team Members</h2>
+                <div id="teamMembersList" class="space-y-3">
+                    <div class="text-center text-gray-400 py-8">Loading team members...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="hidden toast"></div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+
+        function showToast(msg, isErr = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.backgroundColor = isErr ? '#ef4444' : '#22c55e';
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // Get team members from localStorage
+        function getTeamMembers() {
+            const members = localStorage.getItem('riskintel_team');
+            if (members) {
+                return JSON.parse(members);
+            }
+            // Default team members
+            return [
+                { id: 1, name: 'Sarah Kim', email: 'sarah@nexus.ai', role: 'Developer', reliability: 92, tasksCompleted: 48 },
+                { id: 2, name: 'Priya Singh', email: 'priya@nexus.ai', role: 'Designer', reliability: 88, tasksCompleted: 22 },
+                { id: 3, name: 'Marcus Wright', email: 'marcus@nexus.ai', role: 'Developer', reliability: 38, tasksCompleted: 12 },
+                { id: 4, name: 'Alex Chen', email: 'alex@nexus.ai', role: 'QA', reliability: 54, tasksCompleted: 32 },
+                { id: 5, name: 'Jordan Lee', email: 'jordan@nexus.ai', role: 'Manager', reliability: 78, tasksCompleted: 25 }
+            ];
+        }
+
+        // Save team members to localStorage
+        function saveTeamMembers(members) {
+            localStorage.setItem('riskintel_team', JSON.stringify(members));
+        }
+
+        // Display team members
+        function displayTeamMembers() {
+            const members = getTeamMembers();
+            const container = document.getElementById('teamMembersList');
+            
+            if (members.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-400 py-8">No team members added yet</div>';
+                return;
+            }
+            
+            container.innerHTML = members.map(member => `
+                <div class="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <div>
+                        <div class="font-semibold text-gray-800">${member.name}</div>
+                        <div class="text-sm text-gray-500">${member.email} | ${member.role}</div>
+                        <div class="text-xs text-gray-400 mt-1">Reliability: ${member.reliability}% | Tasks: ${member.tasksCompleted}</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editMember(${member.id})" class="text-blue-600 hover:text-blue-800 px-3 py-1 rounded border border-blue-300 text-sm">Edit</button>
+                        <button onclick="deleteMember(${member.id})" class="text-red-600 hover:text-red-800 px-3 py-1 rounded border border-red-300 text-sm">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Add new team member
+        function addTeamMember() {
+            const name = document.getElementById('memberName').value.trim();
+            const email = document.getElementById('memberEmail').value.trim();
+            const role = document.getElementById('memberRole').value;
+            
+            if (!name || !email) {
+                showToast('Please enter name and email', true);
+                return;
+            }
+            
+            const members = getTeamMembers();
+            const newId = Math.max(...members.map(m => m.id), 0) + 1;
+            
+            members.push({
+                id: newId,
+                name: name,
+                email: email,
+                role: role,
+                reliability: 50,
+                tasksCompleted: 0
+            });
+            
+            saveTeamMembers(members);
+            displayTeamMembers();
+            
+            document.getElementById('memberName').value = '';
+            document.getElementById('memberEmail').value = '';
+            
+            showToast(`✅ Added ${name} to team`);
+            
+            // Also update backend behavioralRisk if needed
+            updateBackendTeamMember(name, email);
+        }
+
+        // Update backend (optional - for API consistency)
+        function updateBackendTeamMember(name, email) {
+            console.log(`Team member added: ${name} (${email})`);
+            // In production, you would send this to backend API
+        }
+
+        // Edit member
+        function editMember(id) {
+            const members = getTeamMembers();
+            const member = members.find(m => m.id === id);
+            if (!member) return;
+            
+            const newName = prompt('Enter new name:', member.name);
+            const newEmail = prompt('Enter new email:', member.email);
+            const newRole = prompt('Enter role (Developer/Designer/Manager/QA):', member.role);
+            
+            if (newName) member.name = newName;
+            if (newEmail) member.email = newEmail;
+            if (newRole) member.role = newRole;
+            
+            saveTeamMembers(members);
+            displayTeamMembers();
+            showToast(`✅ Updated ${member.name}`);
+        }
+
+        // Delete member
+        function deleteMember(id) {
+            if (confirm('Are you sure you want to remove this team member?')) {
+                let members = getTeamMembers();
+                const member = members.find(m => m.id === id);
+                members = members.filter(m => m.id !== id);
+                saveTeamMembers(members);
+                displayTeamMembers();
+                showToast(`❌ Removed ${member.name} from team`);
+            }
+        }
+
+        // Initialize
+        displayTeamMembers();
+    </script>
+</body>
+</html>

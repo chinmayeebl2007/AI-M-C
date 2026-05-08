@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Details | RiskIntel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .sidebar { background: linear-gradient(180deg, #0f0c29 0%, #302b63 50%, #24243e 100%); }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .risk-high { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-left: 4px solid #dc2626; }
+        .risk-medium { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b; }
+        .risk-low { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-left: 4px solid #22c55e; }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #22c55e; color: white; padding: 12px 24px; border-radius: 8px; z-index: 1000; animation: fadeInOut 3s ease-in-out; }
+        @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(20px); } 15% { opacity: 1; transform: translateY(0); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(20px); } }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <div class="sidebar w-72 text-white p-6 fixed h-full">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center text-lg">🎯</div>
+                <div><div class="font-bold text-xl">RiskIntel</div><div class="text-xs text-white/40">Task Risk Intelligence</div></div>
+            </div>
+            <nav class="space-y-1">
+                <a href="index.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">📊 Dashboard</a>
+                <a href="meeting.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">🎙️ New Meeting</a>
+                <a href="live-capture.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">🎥 Live Capture</a>
+                <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">📋 All Tasks</a>
+                <a href="team-dashboard.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">👥 Team Intelligence</a>
+                <a href="settings.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">⚙️ Settings</a>
+                <a href="help-center.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">❓ Help Center</a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="ml-72 flex-1 p-8">
+            <div id="loadingState" class="text-center py-20">
+                <div class="inline-block w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                <p class="text-gray-500 mt-3">Loading task details...</p>
+            </div>
+
+            <div id="taskContent" class="hidden">
+                <!-- Header -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm mb-6">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h1 id="taskTitle" class="text-2xl font-bold text-gray-800"></h1>
+                            <div class="text-sm text-gray-500 mt-1">Task ID: <span id="taskId"></span></div>
+                        </div>
+                        <div id="actionButtons"></div>
+                    </div>
+                </div>
+
+                <!-- Risk Card -->
+                <div id="riskCard" class="rounded-2xl p-6 mb-6"></div>
+
+                <!-- Two Column -->
+                <div class="grid grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white rounded-2xl p-6 shadow-sm">
+                        <h2 class="font-semibold text-gray-800 mb-3">📋 Assignment</h2>
+                        <div class="space-y-3">
+                            <div class="flex justify-between"><span class="text-gray-500">Task:</span><span id="detailTask"></span></div>
+                            <div class="flex justify-between"><span class="text-gray-500">Owner:</span><span id="detailOwner"></span></div>
+                            <div class="flex justify-between"><span class="text-gray-500">Deadline:</span><span id="detailDeadline"></span></div>
+                            <div class="flex justify-between"><span class="text-gray-500">Status:</span><span id="detailStatus"></span></div>
+                            <div class="flex justify-between"><span class="text-gray-500">Risk Score:</span><span id="detailRisk"></span></div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 shadow-sm">
+                        <h2 class="font-semibold text-gray-800 mb-3">📝 Description</h2>
+                        <p id="descriptionText" class="text-gray-600"></p>
+                    </div>
+                </div>
+
+                <!-- Email Section -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <h2 class="font-semibold text-gray-800 mb-3">📧 Email Reminder</h2>
+                    <button id="sendEmailBtn" class="btn-primary text-white px-6 py-2 rounded-xl font-medium">📧 Send Email Reminder</button>
+                    <div id="emailResult" class="hidden mt-4"></div>
+                </div>
+            </div>
+
+            <div id="errorState" class="hidden">
+                <div class="bg-white rounded-2xl p-8 shadow-sm text-center">
+                    <div class="text-6xl mb-4">❌</div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">Task Not Found</h2>
+                    <p class="text-gray-500 mb-6">The task you're looking for doesn't exist.</p>
+                    <div class="flex gap-3 justify-center">
+                        <a href="index.html" class="bg-purple-600 text-white px-6 py-2 rounded-xl">← Back to Dashboard</a>
+                        <a href="meeting.html" class="bg-green-600 text-white px-6 py-2 rounded-xl">+ Create New Task</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="hidden toast"></div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        let currentTask = null;
+
+        function getTaskId() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('id');
+        }
+
+        function showToast(msg, isErr = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.backgroundColor = isErr ? '#ef4444' : '#22c55e';
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        async function loadTask() {
+            const taskId = getTaskId();
+            if (!taskId) {
+                showError();
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/tasks/${taskId}`);
+                if (!response.ok) throw new Error('Task not found');
+                currentTask = await response.json();
+                displayTask();
+            } catch (error) {
+                console.error('Error:', error);
+                showError();
+            }
+        }
+
+        function displayTask() {
+            if (!currentTask) return;
+
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('taskContent').classList.remove('hidden');
+
+            document.getElementById('taskTitle').innerText = currentTask.title || 'Untitled';
+            document.getElementById('taskId').innerText = currentTask.id;
+            document.getElementById('detailTask').innerHTML = escapeHtml(currentTask.title || '');
+            document.getElementById('detailOwner').innerHTML = escapeHtml(currentTask.owner || 'Unassigned');
+            document.getElementById('detailDeadline').innerHTML = currentTask.deadline ? new Date(currentTask.deadline).toDateString() : 'Not set';
+            document.getElementById('descriptionText').innerHTML = escapeHtml(currentTask.description || 'No description');
+            
+            const riskScore = currentTask.risk_score || currentTask.riskScore || 0;
+            document.getElementById('detailRisk').innerHTML = `<span class="font-bold ${riskScore > 70 ? 'text-red-600' : (riskScore > 40 ? 'text-yellow-600' : 'text-green-600')}">${riskScore}%</span>`;
+            
+            const status = currentTask.status;
+            let statusHtml = '';
+            if (status === 'completed') {
+                statusHtml = '<span class="text-green-600 font-medium">✅ Completed</span>';
+            } else {
+                statusHtml = '<span class="text-blue-600 font-medium">📋 Pending</span>';
+            }
+            document.getElementById('detailStatus').innerHTML = statusHtml;
+
+            const actionDiv = document.getElementById('actionButtons');
+            if (status !== 'completed') {
+                actionDiv.innerHTML = `<button onclick="markAsDone()" class="bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700 transition">✅ Mark Done</button>`;
+            } else {
+                actionDiv.innerHTML = `<a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-xl">← Back</a>`;
+            }
+
+            const riskLevel = riskScore > 70 ? 'High' : (riskScore > 40 ? 'Medium' : 'Low');
+            const riskClass = riskScore > 70 ? 'risk-high' : (riskScore > 40 ? 'risk-medium' : 'risk-low');
+            document.getElementById('riskCard').innerHTML = `
+                <div class="${riskClass} rounded-2xl p-5">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-xl font-bold">${riskLevel} Risk Task</h2>
+                            <p class="text-3xl font-bold mt-2">${riskScore}%</p>
+                            <p class="text-sm">Failure Likelihood</p>
+                        </div>
+                        <div class="text-6xl">${riskScore > 70 ? '🔴' : (riskScore > 40 ? '🟡' : '🟢')}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function markAsDone() {
+            if (confirm('Mark this task as completed?')) {
+                try {
+                    const response = await fetch(`${API_URL}/api/tasks/${currentTask.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'completed' })
+                    });
+                    if (response.ok) {
+                        showToast('✅ Task marked as completed!');
+                        setTimeout(() => window.location.href = 'index.html', 1000);
+                    } else {
+                        showToast('❌ Failed to update task', true);
+                    }
+                } catch (error) {
+                    showToast('❌ Error connecting to backend', true);
+                }
+            }
+        }
+
+        async function sendEmail() {
+            const btn = document.getElementById('sendEmailBtn');
+            const resultDiv = document.getElementById('emailResult');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Sending...';
+            resultDiv.classList.remove('hidden');
+            resultDiv.innerHTML = '<div class="bg-blue-50 p-3 rounded-xl">⏳ Sending email...</div>';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/task/send-email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ taskId: currentTask.id })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    resultDiv.innerHTML = `<div class="bg-green-50 p-3 rounded-xl">✅ Email sent! ${data.message || ''}</div>`;
+                    showToast('✅ Email sent!');
+                } else {
+                    resultDiv.innerHTML = `<div class="bg-red-50 p-3 rounded-xl text-red-700">❌ Failed to send email</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="bg-red-50 p-3 rounded-xl text-red-700">❌ Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '📧 Send Email Reminder';
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showError() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.remove('hidden');
+        }
+
+        document.getElementById('sendEmailBtn')?.addEventListener('click', sendEmail);
+        loadTask();
+    </script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Capture | RiskIntel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f3f4f6; }
+        .mic-btn { background: #ef4444; transition: all 0.3s; }
+        .mic-btn:hover { transform: scale(1.05); background: #dc2626; }
+        .recording-pulse { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        .transcript-box { background: #1a1a2e; color: #4ade80; font-family: monospace; height: 400px; overflow-y: auto; border-radius: 16px; }
+    </style>
+</head>
+<body class="p-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">🎙️ Live Meeting Capture</h1>
+            <p class="text-gray-500 mt-2">Speak naturally - AI transcribes in real-time</p>
+        </div>
+
+        <!-- Main Card -->
+        <div class="bg-white rounded-2xl shadow-xl p-8">
+            <!-- Status -->
+            <div id="status" class="text-center text-gray-500 mb-4">⚪ Not capturing</div>
+
+            <!-- Mic Button -->
+            <div class="flex justify-center mb-8">
+                <button id="micBtn" onclick="toggleCapture()" class="mic-btn w-32 h-32 rounded-full text-white text-5xl shadow-lg flex items-center justify-center">
+                    🎤
+                </button>
+            </div>
+
+            <!-- Transcript Area -->
+            <div id="transcriptArea" class="hidden">
+                <div class="transcript-box p-5">
+                    <div id="transcriptList" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <!-- Alerts Area -->
+            <div id="alertArea" class="hidden mt-4"></div>
+
+            <!-- Process Button -->
+            <div id="processBtnArea" class="hidden mt-6">
+                <button onclick="processMeeting()" class="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700">
+                    📊 Process Captured Meeting
+                </button>
+            </div>
+
+            <!-- Note -->
+            <div class="mt-6 text-center text-xs text-gray-400">
+                🎤 Click the microphone button, allow access, and start speaking
+            </div>
+        </div>
+
+        <!-- Integration Section -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 mt-6">
+            <h3 class="font-semibold text-gray-800 mb-4">🔗 Connect Live Meeting Platform</h3>
+            <div class="flex gap-4">
+                <button onclick="alert('Google Meet integration coming soon')" class="flex-1 bg-blue-600 text-white py-2 rounded-lg">🎥 Google Meet</button>
+                <button onclick="alert('Zoom integration coming soon')" class="flex-1 bg-blue-600 text-white py-2 rounded-lg">💻 Zoom</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let recognition = null;
+        let isCapturing = false;
+        let fullTranscript = [];
+
+        function toggleCapture() {
+            if (isCapturing) {
+                stopCapture();
+            } else {
+                startCapture();
+            }
+        }
+
+        function startCapture() {
+            if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+                alert('❌ Speech recognition not supported. Please use Chrome browser.');
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = function() {
+                isCapturing = true;
+                document.getElementById('status').innerHTML = '🔴 LIVE - Recording... Speak now';
+                document.getElementById('status').style.color = '#ef4444';
+                document.getElementById('micBtn').style.background = '#dc2626';
+                document.getElementById('micBtn').classList.add('recording-pulse');
+                document.getElementById('transcriptArea').classList.remove('hidden');
+                document.getElementById('transcriptList').innerHTML = '<div class="text-gray-500">🎤 Listening... Start speaking</div>';
+                fullTranscript = [];
+            };
+
+            recognition.onresult = function(event) {
+                document.getElementById('transcriptList').innerHTML = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        fullTranscript.push(transcript);
+                        const line = document.createElement('div');
+                        line.className = 'border-b border-gray-700 py-2';
+                        line.innerHTML = `<span class="text-purple-400">🎙️</span> <span class="text-gray-300">${transcript}</span> <span class="text-gray-600 text-xs float-right">${new Date().toLocaleTimeString()}</span>`;
+                        document.getElementById('transcriptList').appendChild(line);
+                        
+                        // Simple real-time analysis
+                        const lowerText = transcript.toLowerCase();
+                        if (lowerText.includes('urgent') || lowerText.includes('asap') || lowerText.includes('critical')) {
+                            showAlert('⚠️ URGENT task detected! High priority.');
+                        } else if (lowerText.includes('delay') || lowerText.includes('late') || lowerText.includes('behind')) {
+                            showAlert('🔴 Delay mentioned - task may need attention.');
+                        } else if (lowerText.includes('will') || lowerText.includes('need to') || lowerText.includes('has to')) {
+                            showAlert('✅ Task commitment detected.');
+                        }
+                    }
+                }
+                const container = document.querySelector('.transcript-box');
+                if (container) container.scrollTop = container.scrollHeight;
+            };
+
+            recognition.onerror = function(event) {
+                alert('Error: ' + event.error);
+                stopCapture();
+            };
+
+            recognition.start();
+        }
+
+        function stopCapture() {
+            if (recognition) {
+                recognition.stop();
+                isCapturing = false;
+                document.getElementById('status').innerHTML = '✅ Capture stopped';
+                document.getElementById('status').style.color = '#22c55e';
+                document.getElementById('micBtn').style.background = '#ef4444';
+                document.getElementById('micBtn').classList.remove('recording-pulse');
+                document.getElementById('processBtnArea').classList.remove('hidden');
+            }
+        }
+
+        function showAlert(message) {
+            const alertArea = document.getElementById('alertArea');
+            alertArea.classList.remove('hidden');
+            alertArea.innerHTML = `<div class="bg-yellow-100 p-3 rounded-xl text-sm text-yellow-800 border-l-4 border-yellow-500">🔔 ${message}</div>`;
+            setTimeout(() => {
+                if (alertArea.innerHTML.includes(message)) {
+                    alertArea.innerHTML = '';
+                    alertArea.classList.add('hidden');
+                }
+            }, 3000);
+        }
+
+        function processMeeting() {
+            if (fullTranscript.length > 0) {
+                const transcript = fullTranscript.join('\n');
+                localStorage.setItem('liveTranscript', transcript);
+                alert('✅ Transcript saved! Go to New Meeting → Paste Transcript to process.');
+                window.location.href = 'meeting.html';
+            } else {
+                alert('No speech captured. Please record something first.');
+            }
+        }
+    </script>
+</body>
+</html>

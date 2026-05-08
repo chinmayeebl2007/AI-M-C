@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Meeting | RiskIntel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .sidebar { background: linear-gradient(180deg, #0f0c29 0%, #302b63 50%, #24243e 100%); }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .tab-active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .recording-pulse { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); } 70% { box-shadow: 0 0 0 20px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }
+        .success-message { background: #dcfce7; border: 2px solid #22c55e; border-radius: 16px; padding: 20px; margin-top: 20px; text-align: center; }
+        .error-message { background: #fee2e2; border: 2px solid #ef4444; border-radius: 16px; padding: 20px; margin-top: 20px; text-align: center; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <div class="sidebar w-72 text-white p-6 fixed h-full">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center text-lg">🎯</div>
+                <div><div class="font-bold text-xl">RiskIntel</div><div class="text-xs text-white/40">Task Risk Intelligence</div></div>
+            </div>
+            <nav class="space-y-1">
+                <a href="index.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">📊 Dashboard</a>
+                <a href="meeting.html" class="flex items-center gap-3 px-4 py-3 bg-white/10 rounded-xl">🎙️ New Meeting</a>
+                <a href="live-capture.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">🎥 Live Capture</a>
+                <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">📋 All Tasks</a>
+                <a href="team-dashboard.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">👥 Team Intelligence</a>
+                <a href="settings.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">⚙️ Settings</a>
+                <a href="help-center.html" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl transition">❓ Help Center</a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="ml-72 flex-1 p-8">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-800">New Meeting</h1>
+                <p class="text-gray-500 mt-1">Process a meeting to extract tasks and predict risks</p>
+            </div>
+
+            <!-- Method Tabs -->
+            <div class="flex gap-2 mb-8 border-b pb-2">
+                <button onclick="selectMethod('paste')" id="tabPaste" class="px-5 py-2 rounded-lg font-medium transition">📝 Paste</button>
+                <button onclick="selectMethod('record')" id="tabRecord" class="px-5 py-2 rounded-lg font-medium transition">🎤 Record</button>
+                <button onclick="selectMethod('upload')" id="tabUpload" class="px-5 py-2 rounded-lg font-medium transition">📁 Upload</button>
+                <button onclick="selectMethod('manual')" id="tabManual" class="px-5 py-2 rounded-lg font-medium transition">✏️ Manual</button>
+            </div>
+
+            <!-- Method 1: PASTE -->
+            <div id="pasteMethod" class="bg-white rounded-2xl p-6 shadow-sm">
+                <textarea id="transcriptText" rows="10" class="w-full border rounded-xl p-4 focus:ring-2 focus:ring-purple-500" placeholder="Paste your meeting transcript here..."></textarea>
+                <button onclick="processTranscript()" class="btn-primary text-white px-6 py-3 rounded-xl font-semibold mt-4 w-full">📊 Process Meeting</button>
+                <div id="pasteResult" class="hidden mt-4"></div>
+            </div>
+
+            <!-- Method 2: RECORD -->
+            <div id="recordMethod" class="hidden bg-white rounded-2xl p-6 shadow-sm text-center">
+                <div class="py-8">
+                    <div class="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">🎤</div>
+                    <div id="recordStatus" class="text-gray-500 mb-4">Click the button below to start recording</div>
+                    <button id="recordBtn" onclick="toggleAudioRecording()" class="bg-red-500 text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-red-600 transition shadow-lg">
+                        🎙️ Start Recording
+                    </button>
+                    <div id="recordingIndicator" class="hidden mt-4">
+                        <div class="recording-pulse inline-block w-3 h-3 bg-red-500 rounded-full"></div>
+                        <span class="ml-2 text-red-500">Recording... Speak now</span>
+                    </div>
+                    <div id="audioTranscriptArea" class="hidden mt-6">
+                        <div class="bg-gray-900 text-green-400 rounded-xl p-4 font-mono text-sm h-40 overflow-y-auto text-left">
+                            <div id="audioTranscriptList"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="recordResult" class="hidden mt-4"></div>
+            </div>
+
+            <!-- Method 3: UPLOAD -->
+            <div id="uploadMethod" class="hidden bg-white rounded-2xl p-6 shadow-sm">
+                <div class="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center">
+                    <div class="text-5xl mb-4">📁</div>
+                    <input type="file" id="audioFile" accept="audio/*" class="hidden" onchange="handleFileSelect(event)">
+                    <button onclick="document.getElementById('audioFile').click()" class="btn-primary text-white px-6 py-3 rounded-xl font-semibold">Choose Audio File</button>
+                    <p class="text-gray-500 text-sm mt-3">MP3, WAV, M4A up to 50MB</p>
+                    <div id="fileName" class="text-sm text-gray-600 mt-2"></div>
+                </div>
+                <div id="uploadResult" class="hidden mt-4"></div>
+            </div>
+
+            <!-- Method 4: MANUAL -->
+            <div id="manualMethod" class="hidden bg-white rounded-2xl p-6 shadow-sm">
+                <div class="space-y-4">
+                    <input type="text" id="manualTitle" placeholder="Task Title" class="w-full border rounded-xl p-3 focus:ring-2 focus:ring-purple-500">
+                    <textarea id="manualDesc" rows="3" placeholder="Description" class="w-full border rounded-xl p-3 focus:ring-2 focus:ring-purple-500"></textarea>
+                    <input type="text" id="manualOwner" placeholder="Owner Name" class="w-full border rounded-xl p-3 focus:ring-2 focus:ring-purple-500">
+                    <input type="email" id="manualEmail" placeholder="Owner Email" class="w-full border rounded-xl p-3 focus:ring-2 focus:ring-purple-500">
+                    <select id="manualPriority" class="w-full border rounded-xl p-3 focus:ring-2 focus:ring-purple-500">
+                        <option value="medium">Medium Priority</option>
+                        <option value="high">High Priority</option>
+                        <option value="low">Low Priority</option>
+                    </select>
+                    <button onclick="createManualTask()" class="btn-primary text-white px-6 py-3 rounded-xl font-semibold w-full">Create Task</button>
+                </div>
+                <div id="manualResult" class="hidden mt-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isAudioRecording = false;
+        let audioRecognition = null;
+        let audioTranscript = [];
+
+        function showMessage(type, message, taskCount = 0) {
+            const activeMethod = document.querySelector('#pasteMethod:not(.hidden)') ? 'paste' : 
+                                 (document.querySelector('#recordMethod:not(.hidden)') ? 'record' :
+                                 (document.querySelector('#uploadMethod:not(.hidden)') ? 'upload' : 'manual'));
+            
+            let resultDiv = null;
+            if (activeMethod === 'paste') resultDiv = document.getElementById('pasteResult');
+            else if (activeMethod === 'record') resultDiv = document.getElementById('recordResult');
+            else if (activeMethod === 'upload') resultDiv = document.getElementById('uploadResult');
+            else resultDiv = document.getElementById('manualResult');
+            
+            if (type === 'success') {
+                resultDiv.innerHTML = `
+                    <div class="success-message">
+                        <div class="text-green-600 text-2xl mb-2">✅</div>
+                        <div class="font-bold text-green-800 text-lg">${message}</div>
+                        <div class="text-green-600 mt-2">Created ${taskCount} task(s)</div>
+                        <div class="flex gap-3 justify-center mt-4">
+                            <a href="dashboard.html" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">📊 View Dashboard</a>
+                            <button onclick="clearResult()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition">➕ Create Another</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="error-message">
+                        <div class="text-red-600 text-2xl mb-2">❌</div>
+                        <div class="font-bold text-red-800">${message}</div>
+                        <div class="mt-3">
+                            <button onclick="clearResult()" class="bg-purple-600 text-white px-4 py-2 rounded-lg">Try Again</button>
+                        </div>
+                    </div>
+                `;
+            }
+            resultDiv.classList.remove('hidden');
+            
+            // Scroll to result
+            resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function clearResult() {
+            document.getElementById('pasteResult')?.classList.add('hidden');
+            document.getElementById('recordResult')?.classList.add('hidden');
+            document.getElementById('uploadResult')?.classList.add('hidden');
+            document.getElementById('manualResult')?.classList.add('hidden');
+            
+            // Clear input fields
+            document.getElementById('transcriptText').value = '';
+            document.getElementById('audioTranscriptList').innerHTML = '';
+            document.getElementById('audioTranscriptArea').classList.add('hidden');
+        }
+
+        function selectMethod(method) {
+            clearResult();
+            document.getElementById('pasteMethod').classList.add('hidden');
+            document.getElementById('recordMethod').classList.add('hidden');
+            document.getElementById('uploadMethod').classList.add('hidden');
+            document.getElementById('manualMethod').classList.add('hidden');
+            document.getElementById(`${method}Method`).classList.remove('hidden');
+            
+            const tabs = ['paste', 'record', 'upload', 'manual'];
+            tabs.forEach(t => {
+                const tab = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                if (t === method) {
+                    tab.className = 'px-5 py-2 rounded-lg font-medium tab-active';
+                } else {
+                    tab.className = 'px-5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 transition';
+                }
+            });
+        }
+
+        // ============ AUDIO RECORDING ============
+        async function toggleAudioRecording() {
+            if (isAudioRecording) {
+                stopAudioRecording();
+            } else {
+                await startAudioRecording();
+            }
+        }
+
+        async function startAudioRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    await processAudioRecording(audioBlob);
+                    stream.getTracks().forEach(t => t.stop());
+                };
+                
+                mediaRecorder.start();
+                isAudioRecording = true;
+                
+                document.getElementById('recordBtn').innerHTML = '⏹️ Stop Recording';
+                document.getElementById('recordBtn').className = 'bg-gray-500 text-white px-8 py-4 rounded-full text-lg font-semibold';
+                document.getElementById('recordingIndicator').classList.remove('hidden');
+                document.getElementById('recordStatus').innerHTML = '🔴 Recording... Speak now';
+                document.getElementById('audioTranscriptArea').classList.remove('hidden');
+                document.getElementById('audioTranscriptList').innerHTML = '';
+                audioTranscript = [];
+                
+                // Start speech recognition for live transcript
+                startSpeechRecognition();
+                
+            } catch (err) {
+                showMessage('error', 'Microphone access denied. Please allow microphone permissions.');
+            }
+        }
+
+        function stopAudioRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+            if (audioRecognition) audioRecognition.stop();
+            isAudioRecording = false;
+            
+            document.getElementById('recordBtn').innerHTML = '🎙️ Start Recording';
+            document.getElementById('recordBtn').className = 'bg-red-500 text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-red-600 transition shadow-lg';
+            document.getElementById('recordingIndicator').classList.add('hidden');
+            document.getElementById('recordStatus').innerHTML = 'Processing recording...';
+        }
+
+        function startSpeechRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            audioRecognition = new SpeechRecognition();
+            audioRecognition.continuous = true;
+            audioRecognition.interimResults = true;
+            audioRecognition.lang = 'en-US';
+            
+            audioRecognition.onresult = (event) => {
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        audioTranscript.push(transcript);
+                        const line = document.createElement('div');
+                        line.className = 'border-b border-gray-700 py-1 text-sm';
+                        line.innerHTML = `🎙️ ${transcript}`;
+                        document.getElementById('audioTranscriptList').appendChild(line);
+                        
+                        const container = document.getElementById('audioTranscriptList').parentElement;
+                        if (container) container.scrollTop = container.scrollHeight;
+                    }
+                }
+            };
+            
+            audioRecognition.start();
+        }
+
+        async function processAudioRecording(blob) {
+            const formData = new FormData();
+            formData.append('audio', blob);
+            formData.append('title', `Audio Recording ${new Date().toLocaleString()}`);
+            
+            try {
+                const response = await fetch(`${API_URL}/api/meeting/record`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('success', 'Meeting processed successfully!', data.tasks?.length || 0);
+                } else {
+                    showMessage('error', data.error || 'Processing failed');
+                }
+            } catch (error) {
+                showMessage('error', 'Backend error. Make sure server is running on port 3000.');
+            }
+        }
+
+        // ============ PASTE TRANSCRIPT ============
+        async function processTranscript() {
+            const transcript = document.getElementById('transcriptText').value;
+            if (!transcript.trim()) { 
+                showMessage('error', 'Please enter transcript text');
+                return; 
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/api/meeting/transcript`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transcript })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('success', 'Transcript processed successfully!', data.tasks?.length || 0);
+                } else {
+                    showMessage('error', data.error || 'Processing failed');
+                }
+            } catch (error) {
+                showMessage('error', 'Backend error. Make sure server is running on port 3000.');
+            }
+        }
+
+        // ============ UPLOAD FILE ============
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                document.getElementById('fileName').innerHTML = `Selected: ${file.name}`;
+                uploadAudioFile(file);
+            }
+        }
+
+        async function uploadAudioFile(file) {
+            const formData = new FormData();
+            formData.append('audio', file);
+            formData.append('title', `Uploaded Meeting ${new Date().toLocaleString()}`);
+            
+            try {
+                const response = await fetch(`${API_URL}/api/meeting/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('success', 'Audio uploaded and processed!', data.tasks?.length || 0);
+                } else {
+                    showMessage('error', data.error || 'Processing failed');
+                }
+            } catch (error) {
+                showMessage('error', 'Backend error. Make sure server is running on port 3000.');
+            }
+        }
+
+        // ============ MANUAL TASK ============
+        async function createManualTask() {
+            const taskData = {
+                title: document.getElementById('manualTitle').value,
+                description: document.getElementById('manualDesc').value,
+                owner: document.getElementById('manualOwner').value || 'Unassigned',
+                ownerEmail: document.getElementById('manualEmail').value || 'user@example.com',
+                priority: document.getElementById('manualPriority').value
+            };
+            if (!taskData.title) { 
+                showMessage('error', 'Please enter task title');
+                return; 
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/api/tasks/manual`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(taskData)
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('success', 'Task created successfully!', 1);
+                    document.getElementById('manualTitle').value = '';
+                    document.getElementById('manualDesc').value = '';
+                    document.getElementById('manualOwner').value = '';
+                    document.getElementById('manualEmail').value = '';
+                } else {
+                    showMessage('error', 'Failed to create task');
+                }
+            } catch (error) {
+                showMessage('error', 'Backend error. Make sure server is running on port 3000.');
+            }
+        }
+
+        // Initialize with paste tab
+        selectMethod('paste');
+    </script>
+</body>
+</html>

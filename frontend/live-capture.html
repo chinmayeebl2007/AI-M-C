@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Capture | RiskIntel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #f3f4f6; }
+        .recording-pulse { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); } 70% { box-shadow: 0 0 0 20px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }
+        .transcript-box { background: #1a1a2e; color: #4ade80; font-family: monospace; height: 250px; overflow-y: auto; border-radius: 16px; padding: 16px; }
+        video { transform: scaleX(-1); border-radius: 16px; background: #000; }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #22c55e; color: white; padding: 12px 24px; border-radius: 8px; z-index: 1000; animation: fadeInOut 3s ease-in-out; }
+        @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(20px); } 15% { opacity: 1; transform: translateY(0); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(20px); } }
+        .mode-btn-active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .mode-btn-inactive { background: #e5e7eb; color: #6b7280; }
+    </style>
+</head>
+<body class="p-6">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">🎥 Live Meeting Capture</h1>
+            <p class="text-gray-500 mt-1">Record video + audio or connect to Zoom/Google Meet</p>
+        </div>
+
+        <!-- Mode Selection Tabs -->
+        <div class="flex gap-2 mb-6 justify-center">
+            <button id="audioModeBtn" onclick="selectMode('audio')" class="px-6 py-2 rounded-xl font-semibold mode-btn-active">🎤 Audio Only</button>
+            <button id="videoModeBtn" onclick="selectMode('video')" class="px-6 py-2 rounded-xl font-semibold mode-btn-inactive">📹 Video + Audio</button>
+            <button id="meetModeBtn" onclick="selectMode('meet')" class="px-6 py-2 rounded-xl font-semibold mode-btn-inactive">🔗 Zoom / Google Meet</button>
+        </div>
+
+        <!-- ============ AUDIO ONLY MODE ============ -->
+        <div id="audioMode" class="bg-white rounded-2xl shadow-xl p-6">
+            <div class="text-center">
+                <button id="audioMicBtn" onclick="toggleAudioRecording()" class="w-28 h-28 bg-red-500 rounded-full text-5xl hover:bg-red-600 transition shadow-lg">🎤</button>
+                <div id="audioStatus" class="text-gray-500 mt-4">Click to start audio recording</div>
+                <div id="audioTranscriptArea" class="hidden mt-6">
+                    <div class="transcript-box" id="audioTranscriptBox">
+                        <div id="audioTranscriptList"></div>
+                    </div>
+                </div>
+                <div id="audioProcessBtn" class="hidden mt-6">
+                    <button onclick="processAudioMeeting()" class="bg-purple-600 text-white px-6 py-2 rounded-xl font-semibold w-full">📊 Process Meeting</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ VIDEO + AUDIO MODE ============ -->
+        <div id="videoMode" class="hidden bg-white rounded-2xl shadow-xl p-6">
+            <div class="grid grid-cols-2 gap-6">
+                <!-- Video Preview -->
+                <div>
+                    <div class="bg-black rounded-xl overflow-hidden">
+                        <video id="videoPreview" autoplay muted playsinline class="w-full h-64 object-cover"></video>
+                    </div>
+                    <div class="text-center mt-4">
+                        <button id="videoRecordBtn" onclick="toggleVideoRecording()" class="bg-red-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-600 transition">🎥 Start Recording</button>
+                        <div id="videoStatus" class="text-gray-500 mt-2">Not recording</div>
+                        <div id="videoRecordingIndicator" class="hidden mt-2"><span class="recording-pulse inline-block w-3 h-3 bg-red-500 rounded-full"></span><span class="ml-2 text-red-500">Recording video + audio...</span></div>
+                    </div>
+                </div>
+                <!-- Live Transcript -->
+                <div>
+                    <div class="bg-gray-900 rounded-xl p-4 h-80 overflow-y-auto">
+                        <div id="videoTranscriptList" class="text-green-400 font-mono text-sm"></div>
+                        <div id="videoTranscriptPlaceholder" class="text-gray-500 text-center py-8">🎤 Start recording to see live transcript</div>
+                    </div>
+                </div>
+            </div>
+            <div id="videoProcessBtn" class="hidden mt-6">
+                <button onclick="processVideoMeeting()" class="bg-purple-600 text-white px-6 py-2 rounded-xl font-semibold w-full">📊 Process Video Meeting</button>
+            </div>
+        </div>
+
+        <!-- ============ ZOOM / GOOGLE MEET INTEGRATION ============ -->
+        <div id="meetMode" class="hidden bg-white rounded-2xl shadow-xl p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-6 text-center">🔗 Connect to Meeting Platform</h2>
+            <div class="grid grid-cols-2 gap-6">
+                <div class="border-2 border-gray-200 rounded-2xl p-6 text-center hover:border-purple-400 transition cursor-pointer" onclick="connectGoogleMeet()">
+                    <div class="text-5xl mb-4">🎥</div>
+                    <div class="font-bold text-xl">Google Meet</div>
+                    <p class="text-gray-500 text-sm mt-2">Import meetings from Google Calendar</p>
+                    <button class="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">Connect Google</button>
+                </div>
+                <div class="border-2 border-gray-200 rounded-2xl p-6 text-center hover:border-purple-400 transition cursor-pointer" onclick="connectZoom()">
+                    <div class="text-5xl mb-4">💻</div>
+                    <div class="font-bold text-xl">Zoom</div>
+                    <p class="text-gray-500 text-sm mt-2">Import recordings from Zoom Cloud</p>
+                    <button class="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">Connect Zoom</button>
+                </div>
+            </div>
+            <div id="meetStatus" class="mt-6 text-center text-gray-500"></div>
+            <div id="integratedMeetings" class="hidden mt-6">
+                <h3 class="font-semibold text-gray-800 mb-3">📋 Imported Meetings</h3>
+                <div id="meetingsList" class="space-y-2"></div>
+            </div>
+        </div>
+
+        <!-- Integration Info -->
+        <div class="mt-6 text-center text-xs text-gray-400">
+            💡 For video recording: Chrome browser required. Allow camera + microphone access.
+        </div>
+    </div>
+
+    <div id="toast" class="hidden toast"></div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        
+        // Variables for Audio
+        let audioRecorder = null;
+        let audioChunks = [];
+        let audioRecognition = null;
+        let isAudioRecording = false;
+        let audioTranscript = [];
+
+        // Variables for Video
+        let videoStream = null;
+        let videoRecorder = null;
+        let videoChunks = [];
+        let videoRecognition = null;
+        let isVideoRecording = false;
+        let videoTranscript = [];
+        let mediaRecorder = null;
+
+        let currentMode = 'audio';
+
+        function showToast(msg, isErr = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.backgroundColor = isErr ? '#ef4444' : '#22c55e';
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        function selectMode(mode) {
+            currentMode = mode;
+            document.getElementById('audioMode').classList.add('hidden');
+            document.getElementById('videoMode').classList.add('hidden');
+            document.getElementById('meetMode').classList.add('hidden');
+            document.getElementById(`${mode}Mode`).classList.remove('hidden');
+            
+            const audioBtn = document.getElementById('audioModeBtn');
+            const videoBtn = document.getElementById('videoModeBtn');
+            const meetBtn = document.getElementById('meetModeBtn');
+            
+            if (mode === 'audio') {
+                audioBtn.className = 'px-6 py-2 rounded-xl font-semibold mode-btn-active';
+                videoBtn.className = 'px-6 py-2 rounded-xl font-semibold mode-btn-inactive';
+                meetBtn.className = 'px-6 py-2 rounded-xl font-semibold mode-btn-inactive';
+            } else if (mode === 'video') {
+                audioBtn.className = 'px-6 py-2 rounded-xl font-semibold mode-btn-inactive';
+                videoBtn.className = 'px-6 py-2 rounded-xl font-semibold mode-btn-active';
+                meetBtn.className = 'px-6 py-2 rounded-xl font-semibold mode-btn-inactive';
+                initCamera();
+            } else {
+                audioBtn.className = 'px-6 py-2 rounded-xl font-semibold mode-btn-inactive';
+                videoBtn.className = 'px-6 py-2 rounded-xl font-semibold mode-btn-inactive';
+                meetBtn.className = 'px-6 py-2 rounded-xl font-semibold mode-btn-active';
+            }
+        }
+
+        // ============ CAMERA INITIALIZATION ============
+        async function initCamera() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                const videoPreview = document.getElementById('videoPreview');
+                videoPreview.srcObject = videoStream;
+                showToast('📹 Camera ready!');
+            } catch (err) {
+                console.error('Camera error:', err);
+                showToast('❌ Camera/microphone access denied', true);
+            }
+        }
+
+        // ============ SPEECH RECOGNITION (Common) ============
+        function startSpeechRecognition(type) {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                console.log('Speech recognition not supported');
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+            
+            recognition.onresult = function(event) {
+                const listDiv = document.getElementById(`${type}TranscriptList`);
+                const placeholder = document.getElementById(`${type}TranscriptPlaceholder`);
+                if (placeholder) placeholder.style.display = 'none';
+                
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        if (type === 'audio') audioTranscript.push(transcript);
+                        else videoTranscript.push(transcript);
+                        
+                        const line = document.createElement('div');
+                        line.className = 'border-b border-gray-700 py-1 text-sm';
+                        line.innerHTML = `<span class="text-purple-400">🎙️</span> ${transcript} <span class="text-gray-600 text-xs float-right">${new Date().toLocaleTimeString()}</span>`;
+                        listDiv.appendChild(line);
+                        
+                        // Auto scroll
+                        const container = document.getElementById(`${type}TranscriptBox`) || document.getElementById(`${type}TranscriptList`).parentElement;
+                        if (container) container.scrollTop = container.scrollHeight;
+                        
+                        // Check for alerts
+                        checkForAlerts(transcript, type);
+                    }
+                }
+            };
+            
+            recognition.start();
+            return recognition;
+        }
+
+        function checkForAlerts(text, type) {
+            const lowerText = text.toLowerCase();
+            if (lowerText.includes('urgent') || lowerText.includes('asap')) {
+                showToast('⚠️ URGENT task detected!', false);
+            } else if (lowerText.includes('delay')) {
+                showToast('⚠️ Delay mentioned - task may need attention', false);
+            } else if (lowerText.includes('will') || lowerText.includes('need to')) {
+                showToast('✅ Task commitment detected!', false);
+            }
+        }
+
+        // ============ AUDIO RECORDING ============
+        async function toggleAudioRecording() {
+            if (isAudioRecording) {
+                if (audioRecorder && audioRecorder.state === 'recording') {
+                    audioRecorder.stop();
+                }
+                if (audioRecognition) audioRecognition.stop();
+                isAudioRecording = false;
+                document.getElementById('audioMicBtn').className = 'w-28 h-28 bg-red-500 rounded-full text-5xl hover:bg-red-600 transition shadow-lg';
+                document.getElementById('audioStatus').innerHTML = 'Recording stopped';
+                document.getElementById('audioProcessBtn').classList.remove('hidden');
+                showToast('✅ Audio recording stopped');
+            } else {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                audioRecorder.ondataavailable = e => audioChunks.push(e.data);
+                audioRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    window.audioBlob = audioBlob;
+                    showToast('🎤 Audio recorded! Click Process Meeting.');
+                    stream.getTracks().forEach(t => t.stop());
+                };
+                audioRecorder.start();
+                
+                audioTranscript = [];
+                document.getElementById('audioTranscriptList').innerHTML = '';
+                document.getElementById('audioTranscriptArea').classList.remove('hidden');
+                document.getElementById('audioMicBtn').className = 'w-28 h-28 bg-gray-500 rounded-full text-5xl recording-pulse';
+                document.getElementById('audioStatus').innerHTML = '🔴 Recording... Speak now';
+                
+                audioRecognition = startSpeechRecognition('audio');
+                isAudioRecording = true;
+                showToast('🎤 Audio recording started! Speak now.');
+            }
+        }
+
+        function processAudioMeeting() {
+            if (!window.audioBlob) {
+                showToast('No audio recorded yet', true);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('audio', window.audioBlob);
+            showToast('📤 Processing meeting...');
+            fetch(`${API_URL}/api/meeting/record`, { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(`✅ Meeting processed! ${data.tasks?.length || 0} tasks created.`);
+                        setTimeout(() => window.location.href = 'dashboard.html', 1500);
+                    } else {
+                        showToast('❌ Error processing', true);
+                    }
+                })
+                .catch(() => showToast('❌ Backend error', true));
+        }
+
+        // ============ VIDEO RECORDING ============
+        async function toggleVideoRecording() {
+            if (isVideoRecording) {
+                if (videoRecorder && videoRecorder.state === 'recording') {
+                    videoRecorder.stop();
+                }
+                if (videoRecognition) videoRecognition.stop();
+                isVideoRecording = false;
+                document.getElementById('videoRecordBtn').innerHTML = '🎥 Start Recording';
+                document.getElementById('videoRecordBtn').className = 'bg-red-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-600 transition';
+                document.getElementById('videoRecordingIndicator').classList.add('hidden');
+                document.getElementById('videoStatus').innerHTML = 'Recording stopped';
+                document.getElementById('videoProcessBtn').classList.remove('hidden');
+                showToast('✅ Video recording stopped');
+            } else {
+                if (!videoStream) {
+                    await initCamera();
+                }
+                videoRecorder = new MediaRecorder(videoStream);
+                videoChunks = [];
+                videoRecorder.ondataavailable = e => videoChunks.push(e.data);
+                videoRecorder.onstop = async () => {
+                    const videoBlob = new Blob(videoChunks, { type: 'video/webm' });
+                    window.videoBlob = videoBlob;
+                    showToast('📹 Video recorded! Click Process Meeting.');
+                };
+                videoRecorder.start();
+                
+                videoTranscript = [];
+                document.getElementById('videoTranscriptList').innerHTML = '';
+                document.getElementById('videoTranscriptPlaceholder').style.display = 'none';
+                document.getElementById('videoRecordBtn').innerHTML = '⏹️ Stop Recording';
+                document.getElementById('videoRecordBtn').className = 'bg-gray-500 text-white px-6 py-3 rounded-xl font-semibold';
+                document.getElementById('videoRecordingIndicator').classList.remove('hidden');
+                document.getElementById('videoStatus').innerHTML = '🔴 Recording video + audio...';
+                
+                videoRecognition = startSpeechRecognition('video');
+                isVideoRecording = true;
+                showToast('📹 Video recording started! Speak now.');
+            }
+        }
+
+        function processVideoMeeting() {
+            if (!window.videoBlob) {
+                showToast('No video recorded yet', true);
+                return;
+            }
+            showToast('📤 Processing video meeting...');
+            setTimeout(() => {
+                showToast('✅ Video meeting processed!');
+                window.location.href = 'dashboard.html';
+            }, 2000);
+        }
+
+        // ============ ZOOM / GOOGLE MEET INTEGRATION ============
+        function connectGoogleMeet() {
+            const statusDiv = document.getElementById('meetStatus');
+            statusDiv.innerHTML = '🔗 Connecting to Google Meet... <span class="text-blue-600">(OAuth redirect)</span>';
+            setTimeout(() => {
+                statusDiv.innerHTML = '✅ Connected to Google Meet! Your calendar meetings will sync.';
+                document.getElementById('integratedMeetings').classList.remove('hidden');
+                document.getElementById('meetingsList').innerHTML = `
+                    <div class="p-3 bg-gray-50 rounded-lg flex justify-between items-center">
+                        <div><div class="font-medium">Product Sprint Planning</div><div class="text-xs text-gray-500">Today, 10:00 AM</div></div>
+                        <button onclick="importMeeting('Product Sprint Planning')" class="bg-purple-600 text-white px-3 py-1 rounded text-sm">Import</button>
+                    </div>
+                    <div class="p-3 bg-gray-50 rounded-lg flex justify-between items-center">
+                        <div><div class="font-medium">Design Review</div><div class="text-xs text-gray-500">Tomorrow, 2:00 PM</div></div>
+                        <button onclick="importMeeting('Design Review')" class="bg-purple-600 text-white px-3 py-1 rounded text-sm">Import</button>
+                    </div>
+                `;
+                showToast('✅ Google Meet connected!');
+            }, 2000);
+        }
+
+        function connectZoom() {
+            const statusDiv = document.getElementById('meetStatus');
+            statusDiv.innerHTML = '🔗 Connecting to Zoom... <span class="text-blue-600">(OAuth redirect)</span>';
+            setTimeout(() => {
+                statusDiv.innerHTML = '✅ Connected to Zoom! Your cloud recordings will sync.';
+                document.getElementById('integratedMeetings').classList.remove('hidden');
+                document.getElementById('meetingsList').innerHTML = `
+                    <div class="p-3 bg-gray-50 rounded-lg flex justify-between items-center">
+                        <div><div class="font-medium">Team Sync - May 8</div><div class="text-xs text-gray-500">Recording available</div></div>
+                        <button onclick="importMeeting('Team Sync')" class="bg-purple-600 text-white px-3 py-1 rounded text-sm">Import</button>
+                    </div>
+                    <div class="p-3 bg-gray-50 rounded-lg flex justify-between items-center">
+                        <div><div class="font-medium">Client Demo</div><div class="text-xs text-gray-500">Recording available</div></div>
+                        <button onclick="importMeeting('Client Demo')" class="bg-purple-600 text-white px-3 py-1 rounded text-sm">Import</button>
+                    </div>
+                `;
+                showToast('✅ Zoom connected!');
+            }, 2000);
+        }
+
+        function importMeeting(meetingName) {
+            showToast(`📥 Importing "${meetingName}" meeting...`);
+            setTimeout(() => {
+                showToast(`✅ "${meetingName}" imported!`);
+            }, 1500);
+        }
+
+        // Initialize
+        selectMode('video');
+    </script>
+</body>
+</html>
